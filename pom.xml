@@ -31,6 +31,15 @@
         <module>unifier-tests</module>
       </modules>
     </profile>
+    <profile>
+      <id>scriptedTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <modules>
+        <module>unifier-tests</module>
+      </modules>
+    </profile>
   </profiles>
   <build>
     <plugins>

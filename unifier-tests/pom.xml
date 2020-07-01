@@ -72,7 +72,7 @@
       </build>
     </profile>
     <profile>
-      <id>scriptedtests</id>
+      <id>scriptedTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
