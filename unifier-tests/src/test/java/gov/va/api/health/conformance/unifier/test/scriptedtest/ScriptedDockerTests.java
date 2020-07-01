@@ -16,9 +16,6 @@ import org.junit.experimental.categories.Category;
 
 @Category(ScriptedTest.class)
 public class ScriptedDockerTests {
-
-  private static final List<String> TEST_GOALS = Arrays.asList("clean", "test");
-
   private Invoker invoker;
 
   private File localRepositoryDir = new File(System.getProperty("m2.repo"));
@@ -32,21 +29,28 @@ public class ScriptedDockerTests {
     this.invoker = newInvoker;
   }
 
-  // this method will be called repeatedly, and fire off new builds...
-  @Test
-  public void publishSite() throws MavenInvocationException {
+  private void mavenGoals(final List<String> mvnGoals) throws MavenInvocationException {
     InvocationRequest request = new DefaultInvocationRequest();
-    request.setBaseDirectory(Paths.get("./target/").toFile());
-    request.setGoals(TEST_GOALS);
+    request.setBaseDirectory(Paths.get("..").toFile());
+    request.setGoals(mvnGoals);
+    //    request.setBatchMode(true);
     //
     InvocationResult result = invoker.execute(request);
     System.out.println(result.toString());
   }
 
+  // this method will be called repeatedly, and fire off new builds...
   @Test
-  @Category(ScriptedTest.class)
-  public void showTestCategore() {
+  public void publishSite() throws MavenInvocationException {
+    mavenGoals(Arrays.asList("-Plocaltest docker:start"));
+    mavenGoals(
+        Arrays.asList(
+            "-Plocaltest -pl conformance-unifier -am spring-boot:run -Dspring-boot.run.arguments=\"dstu2,metadata,https://api.va.gov/services/fhir/v0/dstu2/metadata\""));
+    //    mavenGoals(Arrays.asList("-Plocaltest docker:stop"));
+  }
 
+  @Test
+  public void showTestCategory() {
     System.out.println("============================> Scripted Tests");
   }
 }
