@@ -3,9 +3,13 @@ package gov.va.api.health.conformance.unifier.test.scriptedtest;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.core.DockerClientBuilder;
 import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.commons.compress.utils.IOUtils;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationRequest;
@@ -21,7 +25,7 @@ public class ScriptedDockerTests {
 
   private Invoker invoker;
 
-  private File localRepositoryDir = new File(System.getProperty("m2.repo"));
+  private File localRepositoryDir = new File(System.getProperty("user.home") + ".m2/repository");
   private DockerClient dockerClient = DockerClientBuilder.getInstance().build();
 
   @Before
@@ -41,20 +45,27 @@ public class ScriptedDockerTests {
     System.out.println(result.toString());
   }
 
-  // this method will be called repeatedly, and fire off new builds...
   @Test
-  public void mavenGoals() throws MavenInvocationException {
+  public void mavenGoals() throws MavenInvocationException, IOException {
     mavenGoals(Arrays.asList("-Plocaltest docker:start"));
     mavenGoals(
         Arrays.asList(
             "-Plocaltest -pl conformance-unifier -am spring-boot:run -Dspring-boot.run.arguments=\"dstu2,metadata,https://api.va.gov/services/fhir/v0/dstu2/metadata\""));
-    dockerClient.copyArchiveFromContainerCmd(
-        "/tmp/s3mockFileStore1593641003848/", "target/s3results");
+
+    try (OutputStream os = Files.newOutputStream(Paths.get("./target/s3results.tar"))) {
+      IOUtils.copy(
+          dockerClient
+              .copyArchiveFromContainerCmd(
+                  "conformanceS3Mock", "/tmp/s3mockFileStore1593641003848/")
+              .exec(),
+          os);
+    }
     //    mavenGoals(Arrays.asList("-Plocaltest docker:stop"));
   }
 
   @Test
   public void showTestCategory() {
     System.out.println("============================> Scripted Tests");
+//    System.out.println(System.getProperties().toString());
   }
 }
