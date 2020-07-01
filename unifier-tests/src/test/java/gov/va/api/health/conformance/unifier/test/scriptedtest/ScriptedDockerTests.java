@@ -1,5 +1,7 @@
 package gov.va.api.health.conformance.unifier.test.scriptedtest;
 
+import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.core.DockerClientBuilder;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -16,9 +18,11 @@ import org.junit.experimental.categories.Category;
 
 @Category(ScriptedTest.class)
 public class ScriptedDockerTests {
+
   private Invoker invoker;
 
   private File localRepositoryDir = new File(System.getProperty("m2.repo"));
+  private DockerClient dockerClient = DockerClientBuilder.getInstance().build();
 
   @Before
   public void init() {
@@ -33,19 +37,19 @@ public class ScriptedDockerTests {
     InvocationRequest request = new DefaultInvocationRequest();
     request.setBaseDirectory(Paths.get("..").toFile());
     request.setGoals(mvnGoals);
-    //    request.setBatchMode(true);
-    //
     InvocationResult result = invoker.execute(request);
     System.out.println(result.toString());
   }
 
   // this method will be called repeatedly, and fire off new builds...
   @Test
-  public void publishSite() throws MavenInvocationException {
+  public void mavenGoals() throws MavenInvocationException {
     mavenGoals(Arrays.asList("-Plocaltest docker:start"));
     mavenGoals(
         Arrays.asList(
             "-Plocaltest -pl conformance-unifier -am spring-boot:run -Dspring-boot.run.arguments=\"dstu2,metadata,https://api.va.gov/services/fhir/v0/dstu2/metadata\""));
+    dockerClient.copyArchiveFromContainerCmd(
+        "/tmp/s3mockFileStore1593641003848/", "target/s3results");
     //    mavenGoals(Arrays.asList("-Plocaltest docker:stop"));
   }
 
