@@ -8,10 +8,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.utils.IOUtils;
@@ -29,6 +31,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(ScriptedTest.class)
+@Slf4j
 public class ScriptedDockerTests {
   private static File localRepositoryDir;
 
@@ -70,8 +73,14 @@ public class ScriptedDockerTests {
             mapper.readTree(
                 Paths.get("src/test/resources/" + resultType + "/fileData.json").toFile());
     expectedFileData.remove("date");
-    final Path resultsPath =
-        Paths.get("./target/s3results/s3mockFileStore1593641003848/testbucket/" + resultType);
+    final Path resultsPathRoot = Paths.get("./target/s3results/tmp");
+    final Path bucketRoot =
+        Files.list(resultsPathRoot)
+            .filter(f -> f.getFileName().toString().startsWith("s3mockFileStore"))
+            .findAny()
+            .map(s3 -> s3.resolve("testbucket"))
+            .get();
+    Path resultsPath = bucketRoot.resolve(resultType);
     ObjectNode fileData =
         (ObjectNode) mapper.readTree(resultsPath.resolve("fileData").toAbsolutePath().toFile());
     fileData.remove("date");
@@ -85,7 +94,7 @@ public class ScriptedDockerTests {
 
   @Before
   public void initInvoker() throws MavenInvocationException {
-    System.out.println("m2.repo=" + localRepositoryDir.getAbsolutePath());
+    log.info("m2.repo=" + localRepositoryDir.getAbsolutePath());
     Invoker newInvoker = new DefaultInvoker();
     newInvoker.setLocalRepositoryDirectory(localRepositoryDir);
     this.invoker = newInvoker;
@@ -102,14 +111,12 @@ public class ScriptedDockerTests {
 
   @Test
   public void mavenScripts() throws MavenInvocationException, IOException {
-    System.out.println("============================> Scripted Tests");
+    log.info("============================> Scripted Tests <============================");
     mavenGoals(
         Arrays.asList(
             "-Plocaltest -pl conformance-unifier -am spring-boot:run -Dspring-boot.run.arguments=\"dstu2,metadata,https://api.va.gov/services/fhir/v0/dstu2/metadata\""));
     untar(
-        dockerClient
-            .copyArchiveFromContainerCmd("conformanceS3Mock", "/tmp/s3mockFileStore1593641003848/")
-            .exec(),
+        dockerClient.copyArchiveFromContainerCmd("conformanceS3Mock", "/tmp/").exec(),
         Paths.get("./target/s3results").toFile());
     checkS3Results("dstu2-metadata");
   }
