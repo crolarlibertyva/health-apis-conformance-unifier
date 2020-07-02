@@ -1,13 +1,16 @@
 package gov.va.api.health.conformance.unifier.test.scriptedtest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.core.DockerClientBuilder;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -18,6 +21,7 @@ import org.apache.maven.shared.invoker.InvocationRequest;
 import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.invoker.Invoker;
 import org.apache.maven.shared.invoker.MavenInvocationException;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -30,6 +34,8 @@ public class ScriptedDockerTests {
   private static DockerClient dockerClient;
 
   private Invoker invoker;
+
+  private ObjectMapper mapper = new ObjectMapper();
 
   @BeforeClass
   public static void initialize() {
@@ -53,6 +59,17 @@ public class ScriptedDockerTests {
         IOUtils.copy(fin, new FileOutputStream(curfile));
       }
     }
+  }
+
+  private void checkS3Results(String resultType) throws IOException {
+    Object expectedFileData =
+        mapper.readValue(
+            this.getClass().getResourceAsStream(resultType + "/fileData.json"), HashMap.class);
+    final Path resultsPath =
+        Paths.get("./target/s3results/s3mockFileStore1593641003848/testbucket" + resultType);
+    Object fileData =
+        mapper.readValue(resultsPath.resolve("fileData").toAbsolutePath().toFile(), HashMap.class);
+    Assert.assertEquals(expectedFileData, fileData);
   }
 
   @Before
@@ -83,6 +100,7 @@ public class ScriptedDockerTests {
             .copyArchiveFromContainerCmd("conformanceS3Mock", "/tmp/s3mockFileStore1593641003848/")
             .exec(),
         Paths.get("./target/s3results").toFile());
+    checkS3Results("dstu-metadata");
     // mavenGoals(Arrays.asList("-Plocaltest docker:stop"));
   }
 
