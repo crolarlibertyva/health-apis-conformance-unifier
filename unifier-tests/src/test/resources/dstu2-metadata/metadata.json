@@ -1,0 +1,16 @@
+{
+  "name": "dstu2-metadata",
+  "size": "5901",
+  "creationDate": "2020-07-02T00:27:09.000Z",
+  "modificationDate": "2020-07-02T00:27:09.000Z",
+  "md5": "aa7f48b7f6d6072e162369add08b5f4c",
+  "contentType": "application/fhir+json",
+  "contentEncoding": null,
+  "kmsEncryption": null,
+  "lastModified": 1593649629020,
+  "dataFile": "/tmp/s3mockFileStore1593641003848/testbucket/dstu2-metadata/fileData",
+  "kmsKeyId": null,
+  "userMetadata": {},
+  "tags": [],
+  "encrypted": false
+}
