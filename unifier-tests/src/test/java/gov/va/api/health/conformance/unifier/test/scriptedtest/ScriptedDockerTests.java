@@ -1,6 +1,7 @@
 package gov.va.api.health.conformance.unifier.test.scriptedtest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.core.DockerClientBuilder;
 import java.io.File;
@@ -10,7 +11,6 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -21,6 +21,7 @@ import org.apache.maven.shared.invoker.InvocationRequest;
 import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.invoker.Invoker;
 import org.apache.maven.shared.invoker.MavenInvocationException;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -38,8 +39,10 @@ public class ScriptedDockerTests {
   private ObjectMapper mapper = new ObjectMapper();
 
   @BeforeClass
-  public static void initialize() {
+  public static void initDockerClient() {
     String repoPath = System.getProperty("user.home") + "/.m2/repository";
+    String m2Repo = System.getProperty("m2.repo");
+    repoPath = m2Repo != null && !m2Repo.isEmpty() ? m2Repo : repoPath;
     localRepositoryDir = Paths.get(repoPath).toFile();
     dockerClient = DockerClientBuilder.getInstance().build();
   }
@@ -62,23 +65,31 @@ public class ScriptedDockerTests {
   }
 
   private void checkS3Results(String resultType) throws IOException {
-    Object expectedFileData =
-        mapper.readValue(
-            Paths.get("src/test/resources/" + resultType + "/fileData.json").toFile(),
-            HashMap.class);
+    ObjectNode expectedFileData =
+        (ObjectNode)
+            mapper.readTree(
+                Paths.get("src/test/resources/" + resultType + "/fileData.json").toFile());
+    expectedFileData.remove("date");
     final Path resultsPath =
         Paths.get("./target/s3results/s3mockFileStore1593641003848/testbucket/" + resultType);
-    Object fileData =
-        mapper.readValue(resultsPath.resolve("fileData").toAbsolutePath().toFile(), HashMap.class);
+    ObjectNode fileData =
+        (ObjectNode) mapper.readTree(resultsPath.resolve("fileData").toAbsolutePath().toFile());
+    fileData.remove("date");
     Assert.assertEquals(expectedFileData, fileData);
   }
 
+  @After
+  public void containerDown() throws MavenInvocationException {
+    mavenGoals(Arrays.asList("-Plocaltest docker:stop"));
+  }
+
   @Before
-  public void init() {
+  public void initInvoker() throws MavenInvocationException {
     System.out.println("m2.repo=" + localRepositoryDir.getAbsolutePath());
     Invoker newInvoker = new DefaultInvoker();
     newInvoker.setLocalRepositoryDirectory(localRepositoryDir);
     this.invoker = newInvoker;
+    mavenGoals(Arrays.asList("-Plocaltest docker:start"));
   }
 
   private void mavenGoals(final List<String> mvnGoals) throws MavenInvocationException {
@@ -92,7 +103,6 @@ public class ScriptedDockerTests {
   @Test
   public void mavenScripts() throws MavenInvocationException, IOException {
     System.out.println("============================> Scripted Tests");
-    mavenGoals(Arrays.asList("-Plocaltest docker:start"));
     mavenGoals(
         Arrays.asList(
             "-Plocaltest -pl conformance-unifier -am spring-boot:run -Dspring-boot.run.arguments=\"dstu2,metadata,https://api.va.gov/services/fhir/v0/dstu2/metadata\""));
@@ -102,6 +112,5 @@ public class ScriptedDockerTests {
             .exec(),
         Paths.get("./target/s3results").toFile());
     checkS3Results("dstu2-metadata");
-    // mavenGoals(Arrays.asList("-Plocaltest docker:stop"));
   }
 }
