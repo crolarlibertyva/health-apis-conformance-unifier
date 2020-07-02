@@ -64,9 +64,10 @@ public class ScriptedDockerTests {
   private void checkS3Results(String resultType) throws IOException {
     Object expectedFileData =
         mapper.readValue(
-            this.getClass().getResourceAsStream(resultType + "/fileData.json"), HashMap.class);
+            Paths.get("src/test/resources/" + resultType + "/fileData.json").toFile(),
+            HashMap.class);
     final Path resultsPath =
-        Paths.get("./target/s3results/s3mockFileStore1593641003848/testbucket" + resultType);
+        Paths.get("./target/s3results/s3mockFileStore1593641003848/testbucket/" + resultType);
     Object fileData =
         mapper.readValue(resultsPath.resolve("fileData").toAbsolutePath().toFile(), HashMap.class);
     Assert.assertEquals(expectedFileData, fileData);
@@ -77,7 +78,6 @@ public class ScriptedDockerTests {
     System.out.println("m2.repo=" + localRepositoryDir.getAbsolutePath());
     Invoker newInvoker = new DefaultInvoker();
     newInvoker.setLocalRepositoryDirectory(localRepositoryDir);
-    //
     this.invoker = newInvoker;
   }
 
@@ -91,6 +91,7 @@ public class ScriptedDockerTests {
 
   @Test
   public void mavenScripts() throws MavenInvocationException, IOException {
+    System.out.println("============================> Scripted Tests");
     mavenGoals(Arrays.asList("-Plocaltest docker:start"));
     mavenGoals(
         Arrays.asList(
@@ -100,13 +101,7 @@ public class ScriptedDockerTests {
             .copyArchiveFromContainerCmd("conformanceS3Mock", "/tmp/s3mockFileStore1593641003848/")
             .exec(),
         Paths.get("./target/s3results").toFile());
-    checkS3Results("dstu-metadata");
+    checkS3Results("dstu2-metadata");
     // mavenGoals(Arrays.asList("-Plocaltest docker:stop"));
-  }
-
-  @Test
-  public void showTestCategory() {
-    System.out.println("============================> Scripted Tests");
-    // System.out.println(System.getProperties().toString());
   }
 }
