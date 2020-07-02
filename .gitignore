@@ -26,6 +26,10 @@
 /dist/
 /nbdist/
 /.nb-gradle/
+/nbactions*
+
+### VSCode ###
+/.vscode/
 
 target/
 
