@@ -26,11 +26,10 @@
 /dist/
 /nbdist/
 /.nb-gradle/
-/nbactions*
+**/nbactions*
 
 ### VSCode ###
-/.vscode/
-
+**/.vscode/
 target/
 
 secrets.conf

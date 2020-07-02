@@ -106,7 +106,7 @@ public class ScriptedDockerTests {
     request.setBaseDirectory(Paths.get("..").toFile());
     request.setGoals(mvnGoals);
     InvocationResult result = invoker.execute(request);
-    System.out.println(result.toString());
+    log.info(result.toString());
   }
 
   @Test
