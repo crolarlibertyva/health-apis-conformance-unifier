@@ -11,7 +11,10 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -85,6 +88,7 @@ public class ScriptedDockerTests {
         (ObjectNode) mapper.readTree(resultsPath.resolve("fileData").toAbsolutePath().toFile());
     fileData.remove("date");
     Assert.assertEquals(expectedFileData, fileData);
+    moveCheckedResults(resultsPathRoot);
   }
 
   @After
@@ -119,5 +123,15 @@ public class ScriptedDockerTests {
         dockerClient.copyArchiveFromContainerCmd("conformanceS3Mock", "/tmp/").exec(),
         Paths.get("./target/s3results").toFile());
     checkS3Results("dstu2-metadata");
+  }
+
+  private void moveCheckedResults(final Path resultsPathRoot) throws IOException {
+    Calendar cal = Calendar.getInstance();
+    cal.setTime(Date.from(Instant.now()));
+    Files.move(
+        resultsPathRoot,
+        resultsPathRoot
+            .getParent()
+            .resolve(String.format("checked-%1$tY-%1$tm-%1$td-%1$tk-%1$tS-%1$tp", cal)));
   }
 }
